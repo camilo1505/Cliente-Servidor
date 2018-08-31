@@ -17,13 +17,25 @@ class Tablero:
             matrizLaberinto.append(vectorActual)
         self.tablero = matrizLaberinto
 
+    def hayObstaculo(self, posicionActual, jugadores):
+        hayPacman = False
+        hayPared = False
+        for i in jugadores:
+            if(i.getPosicionLogica() == posicionActual):
+                hayPacman = True
+        hayPared = self.hayPared(posicionActual)
+        if(hayPared or hayPacman):
+            return True
+        else:
+            return False
+
     def hayPared(self, posicionActual):
         x = posicionActual[0]
         y = posicionActual[1]
         actual = self.tablero[y][x]
         if(actual == '#'):
             return True
-        else:
+        if(actual == ""):
             return False
     
     def hayGalletaGrande(self, posicionActual):
@@ -132,15 +144,22 @@ class Jugador:
 
     def getPosicionLogica(self):
         return self.posicionLogica
+    def getRol(self):
+        return self.rol
 
     def setRol(self, cambioRol):
         self.rol = cambioRol
 
-    def setPuntaje(self, casilla):
-        if(casilla == 'O'):
+    def cazarPacmans(self, jugadores):
+        for i in range(1, len(jugadores)):
+            jugador = jugadores[i]
+            jugador.setRol(1)
+
+    def setPuntaje(self, casilla, jugadores):
+        if(casilla == 'O' and self.rol == 0):
             self.puntaje += 2
-            self.setRol(1)
-        if(casilla == '0'):
+            self.cazarPacmans(jugadores)
+        if(casilla == '0' and self.rol == 0):
             self.puntaje += 1
 
 

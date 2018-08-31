@@ -3,7 +3,7 @@ from pygame.locals import *
 from librerias.tableroLibreria import *
 
 
-def imprimirTablero():
+def imprimirTablero(tablero, pared):
     posicionActual = (0,0)
     for y in range(tablero.getAltura()):
         for x in range(tablero.getAnchura()):
@@ -17,29 +17,32 @@ def imprimirTablero():
                galleta = Galleta(1)
                ventana.blit(galleta.getImagenImprimir(), galleta.posicionImprimirGalleta(posicionActual))
 
-def imprimirJugador(jugador):
-    ventana.blit(jugador.imagenJugador(), jugador.posicionImprimirJugador())
+def imprimirJugador(jugadores):
+    for jugador in jugadores:
+        ventana.blit(jugador.imagenJugador(), jugador.posicionImprimirJugador())
 
-def moverJugador(tipo, jugador, tablero):
+def moverJugador(tipo, jugadores, tablero):
+    jugador = jugadores[0]
     x,y = jugador.getPosicionLogica()
     siguienteCasilla = (0,0)
     if(tipo == "U"):
-        casillaFutura = tablero.hayPared((x,y-1))
+        casillaFutura = tablero.hayObstaculo((x,y-1), jugadores)
         siguienteCasilla = (x,y-1)
     if(tipo == "R"):
-        casillaFutura = tablero.hayPared((x+1,y))
+        casillaFutura = tablero.hayObstaculo((x+1,y), jugadores)
         siguienteCasilla = (x+1,y)
     if(tipo == "D"):
-        casillaFutura = tablero.hayPared((x,y+1))
+        casillaFutura = tablero.hayObstaculo((x,y+1), jugadores)
         siguienteCasilla = (x,y+1)
     if(tipo == "L"):
-        casillaFutura = tablero.hayPared((x-1,y))
+        casillaFutura = tablero.hayObstaculo((x-1,y), jugadores)
         siguienteCasilla = (x-1,y)
     print(casillaFutura)
     
     if(tablero.hayGalletaGrande(siguienteCasilla) or tablero.hayGalletaPequena(siguienteCasilla)):
-        jugador.setPuntaje(tablero.contenidoMapa(siguienteCasilla))
-        tablero.cambioCasilla(siguienteCasilla)
+        if(jugador.getRol() == 0):
+            jugador.setPuntaje(tablero.contenidoMapa(siguienteCasilla), jugadores)
+            tablero.cambioCasilla(siguienteCasilla)
     
     print(jugador.getPuntaje())
 
@@ -55,13 +58,13 @@ ventana = pygame.display.set_mode((pared.getAncho()*tablero.getAnchura(),pared.g
 pygame.display.set_caption("Pacman")
 negro = (0,0,0)
 
-jugador1 = Jugador("prueba", (1,1))
+jugadores = [Jugador("prueba", (1,1)), Jugador("prueba2", (1,2))]
 
 
 while True:
     ventana.fill(negro)
-    imprimirTablero()
-    imprimirJugador(jugador1)
+    imprimirTablero(tablero, pared)
+    imprimirJugador(jugadores)
 
     for evento in pygame.event.get():
         if evento.type == QUIT:
@@ -69,11 +72,11 @@ while True:
             sys.exit()
         if(evento.type == pygame.KEYDOWN):
             if(evento.key == K_UP):
-                moverJugador("U", jugador1, tablero)
+                moverJugador("U", jugadores, tablero)
             if(evento.key == K_RIGHT):
-                moverJugador("R", jugador1, tablero)
+                moverJugador("R", jugadores, tablero)
             if(evento.key == K_DOWN):
-                moverJugador("D", jugador1, tablero)
+                moverJugador("D", jugadores, tablero)
             if(evento.key == K_LEFT):
-                moverJugador("L", jugador1, tablero)
+                moverJugador("L", jugadores, tablero)
     pygame.display.update()   
