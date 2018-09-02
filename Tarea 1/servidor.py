@@ -1,11 +1,33 @@
-import zmq
+import zmq, time
 import sys
+from librerias.libreriaServidor import *
 
-def recibidor(identidad, operacion, contenido, cantidadJugadores, jugadoresRegistrados):
-    if(operacion == 'solicitudJugar'):
-        if(len(jugadoresRegistrados) == cantidadJugadores):
-            mensaje = bytes("cupoCompleto",'ascii')
-            socket.send_mutipart([identidad, mensaje])
+def recibidor(servidor, identidad, operacion, contenido):
+    if(operacion == "solicitudJugar"):
+        if(servidor.hayCupo()):
+            print("hay Cupo Disponible")
+            if(servidor.usuarioValido(identidad)):
+                print("Usuario Valido")
+                servidor.registrarNuevoJugador(identidad)
+                posicionInicialCliente = servidor.posicionCliente(identidad)
+                servidor.enviarMensajeA(identidad, posicionInicialCliente)
+            else:
+                print("Usuario Invalido")
+                servidor.enviarMensajeA(identidad, "usuarioInvalido")        
+        else:
+            print("solicitud para Jugar sin Cupo")
+            servidor.enviarMensajeA(identidad, "cupoCompleto")
+    if(operacion == "empezarJugar"):
+        if(not (servidor.hayCupo()) ):
+            servidor.broadCast("ok")
+        else:
+            servidor.enviarMensajeA(identidad, 'NO')
+
+    if(operacion == "listaJugadores"):
+        mensaje = servidor.listaJugadores()
+        print(mensaje)
+        time.sleep(2)
+        servidor.broadCast(mensaje)
 
 def decodificador(variable):
     return variable.decode('ascii')
@@ -14,24 +36,16 @@ def main():
     if len(sys.argv) != 2:
         print("Faltan Argumentos: <cantidadJugadores>")
         exit()
-    
-    cantidadJugadores = sys.argv[1]
-    jugadoresRegistrados = []
-    
-    contexto = zmq.Context()
-    socket = contexto.socket(zmq.ROUTER)
 
-    socket.bind("tcp://*:5555")
-    print("Servidor Operacional, cantidad de jugadores: " + str(cantidadJugadores))
+    servidor = Servidor(int(sys.argv[1]))
+    servidor.iniciarServidor()
+    print("Servidor Operacional, cantidad de jugadores: " + str(servidor.getCantidadMaximaJugadores()))
 
     while(True):
-        byteIdentidad, byteOperacion, byteContenido = socket.recv_multipart()
-        identidad = decodificador(byteIdentidad)
-        operacion = decodificador(byteOperacion)
-        contenido = decodificador(byteContenido)
-        
+        identidad, operacion, contenido = servidor.recibirMensajeCliente()
+
         print("Operacion <" + operacion + "> recibida de <" + identidad + ">")
-        recibidor(identidad, operacion, contenido, cantidadJugadores, jugadoresRegistrados)
+        recibidor(servidor, identidad, operacion, contenido)
 
         
             

@@ -33,8 +33,9 @@ class Conexion:
             return False
     
     def obtenerMensaje(self):
-        identidad, mensaje = self.socket.recv_multipart()
-        return (identidad.decode('ascii'), mensaje.decode('ascii'))
+        mensaje = self.socket.recv_multipart()
+        respuesta = mensaje[0]
+        return (respuesta.decode('ascii'))
 
 class Tablero:
     def __init__(self, ancho=18, alto=21):

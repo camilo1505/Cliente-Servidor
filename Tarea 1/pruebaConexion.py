@@ -1,14 +1,12 @@
-import sys
+import sys, time
 from librerias.tableroLibreria import *
 
 def main():
-    if len(sys.argv) != 4:
-        print("Faltan Argumentos: <identidad> <operacion> <mensaje>")
+    if len(sys.argv) != 2:
+        print("Faltan Argumentos: <identidad>")
         exit()
     
     identidad = sys.argv[1]
-    operacion = sys.argv[2]
-    mensaje = sys.argv[3]
 
     servidor = Conexion(identidad)
     servidor.iniciarConexion("localhost")
@@ -16,7 +14,21 @@ def main():
 
     solicitud = ("solicitudJugar", "")
     servidor.enviarSolicitud(solicitud)
-    identidad, operacion = servidor.obtenerMensaje()
+    respuesta = servidor.obtenerMensaje()
+    print(respuesta)
+
+    while(respuesta != 'ok'):
+        solicitud = ("empezarJugar", "")
+        servidor.enviarSolicitud(solicitud)
+        respuesta = servidor.obtenerMensaje()
+        print(respuesta)
+        time.sleep(4)
+    
+    solicitud = ("listaJugadores", "")
+    servidor.enviarSolicitud(solicitud)
+    respuesta = servidor.obtenerMensaje()
+    print(respuesta)
+
     
     """if(servidor.mensajesPendientes() == False):
         solicitud = ("solicitudJugar", "")
