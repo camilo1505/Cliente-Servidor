@@ -1,5 +1,40 @@
-import pygame, sys, random
+import pygame, sys, random, zmq
 from pygame.locals import *
+
+class Conexion:
+    def __init__(self, identidad):
+        contexto = zmq.Context()
+        self.socket = contexto.socket(zmq.DEALER)
+        self.identidad = identidad
+        self.poller = zmq.Poller()
+     
+    def iniciarConexion(self, direccion):
+        conexion = "tcp://" + direccion + ":5555"
+        self.socket.identity = self.identidad.encode('ascii')
+        self.socket.connect(conexion)
+        print("Conexion Iniciada con la Identidad <" + self.identidad + ">")
+
+    def iniciarPoller(self):
+        self.poller.register(sys.stdin, zmq.POLLIN)
+        self.poller.register(self.socket, zmq.POLLIN)
+        print("Poller Iniciado Correctamente")
+    
+    def enviarSolicitud(self, solicitud):
+        operacion, contenido = solicitud
+        canal = self.socket
+        canal.send_multipart([bytes(operacion,'ascii'), bytes(contenido,'ascii')])
+        print("Enviado el mensaje <" + self.identidad +">" + " <" + operacion + ">" + " <" + contenido + ">")
+    
+    def mensajesPendientes(self):
+        pendientes = dict(self.poller.poll())
+        if(self.socket in pendientes):
+            return True
+        if(sys.stdin.fileno() in pendientes):
+            return False
+    
+    def obtenerMensaje(self):
+        identidad, mensaje = self.socket.recv_multipart()
+        return (identidad.decode('ascii'), mensaje.decode('ascii'))
 
 class Tablero:
     def __init__(self, ancho=18, alto=21):
@@ -23,6 +58,9 @@ class Tablero:
         for i in jugadores:
             if(i.getPosicionLogica() == posicionActual):
                 hayPacman = True
+                if(i.getRol() == 1):
+                    indice = jugadores.index(i)
+                    jugadores.pop(indice)
         hayPared = self.hayPared(posicionActual)
         if(hayPared or hayPacman):
             return True

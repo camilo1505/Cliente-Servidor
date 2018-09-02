@@ -3,7 +3,7 @@ from pygame.locals import *
 from librerias.tableroLibreria import *
 
 
-def imprimirTablero(tablero, pared):
+def imprimirTablero(tablero, pared, ventana):
     posicionActual = (0,0)
     for y in range(tablero.getAltura()):
         for x in range(tablero.getAnchura()):
@@ -17,8 +17,9 @@ def imprimirTablero(tablero, pared):
                galleta = Galleta(1)
                ventana.blit(galleta.getImagenImprimir(), galleta.posicionImprimirGalleta(posicionActual))
 
-def imprimirJugador(jugadores):
+def imprimirJugador(jugadores, ventana, tablero):
     for jugador in jugadores:
+        tablero.cambioCasilla(jugador.getPosicionLogica())
         ventana.blit(jugador.imagenJugador(), jugador.posicionImprimirJugador())
 
 def moverJugador(tipo, jugadores, tablero):
@@ -49,34 +50,37 @@ def moverJugador(tipo, jugadores, tablero):
     jugador.movimiento(tipo, casillaFutura)
 
 
+def main():
+    pared = Pared("sprites/laberinto/ladrillos2.png")
+    tablero = Tablero()
+    tablero.cargarTablero()
+    pygame.init()
+    ventana = pygame.display.set_mode((pared.getAncho()*tablero.getAnchura(),pared.getAlto()*tablero.getAltura()))
+    pygame.display.set_caption("Pacman")
+    negro = (0,0,0)
 
-pared = Pared("sprites/laberinto/ladrillos2.png")
-tablero = Tablero()
-tablero.cargarTablero()
-pygame.init()
-ventana = pygame.display.set_mode((pared.getAncho()*tablero.getAnchura(),pared.getAlto()*tablero.getAltura()))
-pygame.display.set_caption("Pacman")
-negro = (0,0,0)
+    jugadores = [Jugador("prueba", (1,1)), Jugador("prueba2", (1,2))]
+    
+    while True:
+        ventana.fill(negro)
+        imprimirTablero(tablero, pared, ventana)
+        imprimirJugador(jugadores, ventana, tablero)
 
-jugadores = [Jugador("prueba", (1,1)), Jugador("prueba2", (1,2))]
+        for evento in pygame.event.get():
+            if evento.type == QUIT:
+                pygame.quit()
+                sys.exit()
+            if(evento.type == pygame.KEYDOWN):
+                if(evento.key == K_UP):
+                    moverJugador("U", jugadores, tablero)
+                if(evento.key == K_RIGHT):
+                    moverJugador("R", jugadores, tablero)
+                if(evento.key == K_DOWN):
+                    moverJugador("D", jugadores, tablero)
+                if(evento.key == K_LEFT):
+                    moverJugador("L", jugadores, tablero)
+        pygame.display.update()
 
 
-while True:
-    ventana.fill(negro)
-    imprimirTablero(tablero, pared)
-    imprimirJugador(jugadores)
-
-    for evento in pygame.event.get():
-        if evento.type == QUIT:
-            pygame.quit()
-            sys.exit()
-        if(evento.type == pygame.KEYDOWN):
-            if(evento.key == K_UP):
-                moverJugador("U", jugadores, tablero)
-            if(evento.key == K_RIGHT):
-                moverJugador("R", jugadores, tablero)
-            if(evento.key == K_DOWN):
-                moverJugador("D", jugadores, tablero)
-            if(evento.key == K_LEFT):
-                moverJugador("L", jugadores, tablero)
-    pygame.display.update()   
+if __name__=='__main__':
+    main()
