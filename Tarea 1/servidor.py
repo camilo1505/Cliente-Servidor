@@ -17,17 +17,13 @@ def recibidor(servidor, identidad, operacion, contenido):
         else:
             print("solicitud para Jugar sin Cupo")
             servidor.enviarMensajeA(identidad, "cupoCompleto")
-    if(operacion == "empezarJugar"):
-        if(not (servidor.hayCupo()) ):
-            servidor.broadCast("ok")
-        else:
-            servidor.enviarMensajeA(identidad, 'NO')
-
-    if(operacion == "listaJugadores"):
-        mensaje = servidor.listaJugadores()
-        print(mensaje)
-        time.sleep(2)
-        servidor.broadCast(mensaje)
+    if(operacion == "listoJugar"):
+        servidor.jugadorListo()
+        print(servidor.getJugadoresListos())
+        if(servidor.getJugadoresListos() == servidor.getCantidadMaximaJugadores()):
+            mensaje = servidor.listaJugadores()
+            servidor.broadCast(mensaje)
+        print(servidor.getJugadoresListos())
 
 def decodificador(variable):
     return variable.decode('ascii')

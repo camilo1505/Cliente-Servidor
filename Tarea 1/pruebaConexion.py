@@ -17,14 +17,7 @@ def main():
     respuesta = servidor.obtenerMensaje()
     print(respuesta)
 
-    while(respuesta != 'ok'):
-        solicitud = ("empezarJugar", "")
-        servidor.enviarSolicitud(solicitud)
-        respuesta = servidor.obtenerMensaje()
-        print(respuesta)
-        time.sleep(4)
-    
-    solicitud = ("listaJugadores", "")
+    solicitud = ("listoJugar", "")
     servidor.enviarSolicitud(solicitud)
     respuesta = servidor.obtenerMensaje()
     print(respuesta)

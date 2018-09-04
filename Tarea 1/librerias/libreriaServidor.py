@@ -8,6 +8,7 @@ class Servidor:
         self.socket = contexto.socket(zmq.ROUTER)
         self.clientesRegistrados = {}
         self.cantidadMaximaJugadores = cantidad
+        self.jugadoresListos = 0
         self.posicionesIniciales = [(7,10),(11,3), (19,5)]
     
     def iniciarServidor(self):
@@ -70,3 +71,9 @@ class Servidor:
             aux = str(i) + ":" + str(self.clientesRegistrados[i])
             mensaje = mensaje + aux + ","
         return(mensaje)
+
+    def jugadorListo(self):
+        self.jugadoresListos += 1
+    
+    def getJugadoresListos(self):
+        return self.jugadoresListos
