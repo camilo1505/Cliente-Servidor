@@ -1,4 +1,4 @@
-import pygame, sys, random, zmq
+import pygame, sys, random, zmq, json, time
 from librerias.tableroLibreria import *
 
 
@@ -9,7 +9,7 @@ class Servidor:
         self.clientesRegistrados = {}
         self.cantidadMaximaJugadores = cantidad
         self.jugadoresListos = 0
-        self.posicionesIniciales = [(7,10),(11,3), (19,5)]
+        self.posicionesIniciales = [[1,1],[2,1]]
     
     def iniciarServidor(self):
         self.socket.bind("tcp://*:5555")
@@ -25,11 +25,9 @@ class Servidor:
         mensaje = self.decodificarMensaje(canal.recv_multipart())
         return mensaje
 
-    def jugadoresRegistrados(self):
-        return len(self.clientesRegistrados)
 
     def hayCupo(self):
-        if(self.jugadoresRegistrados() == self.cantidadMaximaJugadores):
+        if(self.jugadoresListos == self.cantidadMaximaJugadores):
             return False
         else:
             return True
@@ -46,10 +44,8 @@ class Servidor:
     def usuarioValido(self, identidad):
         usuarios = self.clientesRegistrados.keys()
         if(identidad in usuarios):
-            print("Usuario esta en usuarios")
             return False
         else:
-            print("Usuario no esta en usuarios")
             return True
 
     def getCantidadMaximaJugadores(self):
@@ -61,19 +57,24 @@ class Servidor:
     def posicionCliente(self, identidad):
         return str(self.clientesRegistrados[identidad])
 
-    def broadCast(self, mensaje):
-        for usuario in self.clientesRegistrados:
-            self.enviarMensajeA(usuario, mensaje)
+    def descomponerJson(self, mensaje):
+        return json.dumps(mensaje)
 
-    def listaJugadores(self):
-        mensaje = ""
-        for i in self.clientesRegistrados.keys():
-            aux = str(i) + ":" + str(self.clientesRegistrados[i])
-            mensaje = mensaje + aux + ","
-        return(mensaje)
+    def enviarPosiciones(self):
+        posiciones = self.clientesRegistrados
+        mensajeJson = self.descomponerJson(posiciones)
+        for usuario in self.clientesRegistrados.keys():
+            self.socket.send_multipart([bytes(usuario,'ascii'), bytes(mensajeJson, 'ascii')])
 
     def jugadorListo(self):
         self.jugadoresListos += 1
     
     def getJugadoresListos(self):
         return self.jugadoresListos
+
+    def cambiarPosicion(self, identidad, posicion):
+        self.clientesRegistrados.pop(identidad)
+        x = posicion[1]
+        y = posicion[3]
+        nuevaPosicion = {identidad:[x,y]}
+        self.clientesRegistrados.update(nuevaPosicion)

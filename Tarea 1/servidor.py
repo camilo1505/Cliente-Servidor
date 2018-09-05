@@ -9,21 +9,24 @@ def recibidor(servidor, identidad, operacion, contenido):
             if(servidor.usuarioValido(identidad)):
                 print("Usuario Valido")
                 servidor.registrarNuevoJugador(identidad)
-                posicionInicialCliente = servidor.posicionCliente(identidad)
-                servidor.enviarMensajeA(identidad, posicionInicialCliente)
+                posicionInicial = servidor.posicionCliente(identidad)
+                mensaje = servidor.descomponerJson(posicionInicial)
+                servidor.enviarMensajeA(identidad, mensaje)
             else:
                 print("Usuario Invalido")
-                servidor.enviarMensajeA(identidad, "usuarioInvalido")        
+                servidor.enviarMensajeA(identidad, "errorUsuario")        
         else:
             print("solicitud para Jugar sin Cupo")
-            servidor.enviarMensajeA(identidad, "cupoCompleto")
+            servidor.enviarMensajeA(identidad, "errorCompleto")
     if(operacion == "listoJugar"):
         servidor.jugadorListo()
-        print(servidor.getJugadoresListos())
         if(servidor.getJugadoresListos() == servidor.getCantidadMaximaJugadores()):
-            mensaje = servidor.listaJugadores()
-            servidor.broadCast(mensaje)
-        print(servidor.getJugadoresListos())
+            servidor.enviarPosiciones()
+        print("Jugadores Listos: " + str(servidor.getJugadoresListos()))
+    if(operacion == "cambiarPosicion"):
+        print("Contenido: " + contenido)
+        servidor.cambiarPosicion(identidad, contenido)
+        servidor.enviarPosiciones()
 
 def decodificador(variable):
     return variable.decode('ascii')

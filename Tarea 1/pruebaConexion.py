@@ -19,6 +19,12 @@ def main():
 
     solicitud = ("listoJugar", "")
     servidor.enviarSolicitud(solicitud)
+    respuesta = servidor.obtenerEstructura()
+    print(respuesta)
+    print(respuesta['ba'])
+
+    solicitud = ("cambiarPosicion","[4,3]")
+    servidor.enviarSolicitud(solicitud)
     respuesta = servidor.obtenerMensaje()
     print(respuesta)
 

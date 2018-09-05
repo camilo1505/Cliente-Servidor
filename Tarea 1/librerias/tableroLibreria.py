@@ -1,4 +1,4 @@
-import pygame, sys, random, zmq
+import pygame, sys, random, zmq, json
 from pygame.locals import *
 
 class Conexion:
@@ -31,6 +31,12 @@ class Conexion:
             return True
         if(sys.stdin.fileno() in pendientes):
             return False
+
+    def obtenerEstructura(self):
+        estructura = self.socket.recv_multipart()
+        mensaje = estructura[0].decode('ascii')
+        mensajeJson = json.loads(mensaje)
+        return mensajeJson
     
     def obtenerMensaje(self):
         mensaje = self.socket.recv_multipart()
@@ -204,6 +210,12 @@ class Jugador:
 
     def getPuntaje(self):
         return self.puntaje
+
+    def getIdentidad(self):
+        return self.identidad
+
+    def setPosicion(self, posicion):
+        self.posicionLogica = posicion
 
 class Galleta:
     
