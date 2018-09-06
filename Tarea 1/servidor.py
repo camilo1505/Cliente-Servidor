@@ -14,7 +14,7 @@ def recibidor(servidor, identidad, operacion, contenido):
                 servidor.enviarMensajeA(identidad, mensaje)
             else:
                 print("Usuario Invalido")
-                servidor.enviarMensajeA(identidad, "errorUsuario")        
+                servidor.enviarMensajeA(identidad, "errorUsuario")
         else:
             print("solicitud para Jugar sin Cupo")
             servidor.enviarMensajeA(identidad, "errorCompleto")
@@ -27,6 +27,11 @@ def recibidor(servidor, identidad, operacion, contenido):
         print("Contenido: " + contenido)
         servidor.cambiarPosicion(identidad, contenido)
         servidor.enviarPosiciones()
+    if(operacion == "comerJugador"):
+        print("Eliminando Jugador: " + contenido)
+        servidor.eliminarJugador(contenido)
+        servidor.enviarMensajeA(identidad, "sumaPuntos")
+        servidor.broadcast(contenido)
 
 def decodificador(variable):
     return variable.decode('ascii')
@@ -46,8 +51,8 @@ def main():
         print("Operacion <" + operacion + "> recibida de <" + identidad + ">")
         recibidor(servidor, identidad, operacion, contenido)
 
-        
-            
+
+
 
 
 

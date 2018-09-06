@@ -22,35 +22,38 @@ def imprimirJugador(jugadores, ventana, tablero):
         tablero.cambioCasilla(jugador.getPosicionLogica())
         ventana.blit(jugador.imagenJugador(), jugador.posicionImprimirJugador())
 
+def imprimirPuntaje(jugador, ventana, fuente):
+    puntos = jugador.getPuntaje()
+    texto = fuente.render("Puntos: " + str(puntos), False,(255,255,255))
+    ventana.blit(texto,(540, 10))
+
+
 def moverJugador(tipo, jugadores, tablero, servidor):
     jugador = jugadores[0]
     x,y = jugador.getPosicionLogica()
     siguienteCasilla = (0,0)
     if(tipo == "U"):
-        casillaFutura = tablero.hayObstaculo((x,y-1), jugadores)
+        casillaFutura = tablero.hayObstaculo((x,y-1), jugadores, servidor)
         siguienteCasilla = (x,y-1)
     if(tipo == "R"):
-        casillaFutura = tablero.hayObstaculo((x+1,y), jugadores)
+        casillaFutura = tablero.hayObstaculo((x+1,y), jugadores, servidor)
         siguienteCasilla = (x+1,y)
     if(tipo == "D"):
-        casillaFutura = tablero.hayObstaculo((x,y+1), jugadores)
+        casillaFutura = tablero.hayObstaculo((x,y+1), jugadores, servidor)
         siguienteCasilla = (x,y+1)
     if(tipo == "L"):
-        casillaFutura = tablero.hayObstaculo((x-1,y), jugadores)
+        casillaFutura = tablero.hayObstaculo((x-1,y), jugadores, servidor)
         siguienteCasilla = (x-1,y)
     print(casillaFutura)
-    
+
     if(tablero.hayGalletaGrande(siguienteCasilla) or tablero.hayGalletaPequena(siguienteCasilla)):
         if(jugador.getRol() == 0):
             jugador.setPuntaje(tablero.contenidoMapa(siguienteCasilla), jugadores)
             tablero.cambioCasilla(siguienteCasilla)
-    
+
     print(jugador.getPuntaje())
 
-    jugador.movimiento(tipo, casillaFutura)
-    aux = [siguienteCasilla[0], siguienteCasilla[1]]
-    solicitud = ("cambiarPosicion", str(aux))
-    servidor.enviarSolicitud(solicitud)
+    jugador.movimiento(tipo, casillaFutura, servidor, siguienteCasilla)
 
 
 def main():
@@ -63,9 +66,11 @@ def main():
     tablero = Tablero()
     tablero.cargarTablero()
     pygame.init()
-    ventana = pygame.display.set_mode((pared.getAncho()*tablero.getAnchura(),pared.getAlto()*tablero.getAltura()))
+    ventana = pygame.display.set_mode(((pared.getAncho()*tablero.getAnchura()) + 150, (pared.getAlto()*tablero.getAltura())))
     pygame.display.set_caption("Pacman")
     negro = (0,0,0)
+    pygame.font.init()
+    fuente = pygame.font.SysFont('Comic Sans MS', 30)
 
     servidor = Conexion(identidad)
     servidor.iniciarConexion("localhost")
@@ -76,40 +81,52 @@ def main():
     respuesta = servidor.obtenerMensaje()
 
     if(respuesta != "errorUsuario" or respuesta != "errorCompleto"):
-        
+
         solicitud = ("listoJugar", "")
         servidor.enviarSolicitud(solicitud)
         respuesta = servidor.obtenerEstructura()
-        
+
         jugadores = []
         posicion = respuesta[identidad]
         x = int(posicion[0])
         y = int(posicion[1])
         jugadorLocal = Jugador(identidad, (x,y))
         jugadores.append(jugadorLocal)
-        
+
         for i in respuesta.keys():
             if(i != identidad):
                 posicion = respuesta[i]
                 x = int(posicion[0])
                 y = int(posicion[1])
                 jugadores.append( Jugador(i,(x,y)) )
-        
+
         while True:
             ventana.fill(negro)
             imprimirTablero(tablero, pared, ventana)
-
-            print(servidor.mensajesPendientes)
-            if(servidor.mensajesPendientes == True):
+            imprimirPuntaje(jugadorLocal, ventana, fuente)
+            if(servidor.mensajesPendientes() == True):
+                idJugadores = []
+                for jugador in jugadores:
+                    idJugadores.append(jugador.getIdentidad())
                 respuesta = servidor.obtenerEstructura()
-                for i in respuesta.keys():
-                    if(i != identidad):
-                        posicion = respuesta[i]
-                        x = int(posicion[0])
-                        y = int(posicion[1])
-                        for jugador in jugadores:
-                            if(jugador.getIdentidad() == i):
-                                jugador.setPosicion((x,y))
+                if(respuesta != "sumaPuntos" or respuesta != "perdiste"):
+                    if(respuesta in idJugadores):
+                        tablero.eliminarJugador(respuesta, jugadores)
+                    else:
+                        for i in respuesta.keys():
+                            if(i != identidad):
+                                posicion = respuesta[i]
+                                print("1: " + str(posicion))
+                                x = int(posicion[0])
+                                y = int(posicion[1])
+                                for jugador in jugadores:
+                                    if(jugador.getIdentidad() == i):
+                                        jugador.setPosicion((x,y))
+                else:
+                    if(respuesta == "perdiste"):
+                        exit()
+                    if(respuesta == "sumaPuntos"):
+                        jugadorLocal.setPuntaje("O", jugadores)
 
             imprimirJugador(jugadores, ventana, tablero)
 

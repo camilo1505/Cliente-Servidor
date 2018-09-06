@@ -7,7 +7,7 @@ class Conexion:
         self.socket = contexto.socket(zmq.DEALER)
         self.identidad = identidad
         self.poller = zmq.Poller()
-     
+
     def iniciarConexion(self, direccion):
         conexion = "tcp://" + direccion + ":5555"
         self.socket.identity = self.identidad.encode('ascii')
@@ -18,15 +18,15 @@ class Conexion:
         self.poller.register(sys.stdin, zmq.POLLIN)
         self.poller.register(self.socket, zmq.POLLIN)
         print("Poller Iniciado Correctamente")
-    
+
     def enviarSolicitud(self, solicitud):
         operacion, contenido = solicitud
         canal = self.socket
         canal.send_multipart([bytes(operacion,'ascii'), bytes(contenido,'ascii')])
         print("Enviado el mensaje <" + self.identidad +">" + " <" + operacion + ">" + " <" + contenido + ">")
-    
+
     def mensajesPendientes(self):
-        pendientes = dict(self.poller.poll())
+        pendientes = dict(self.poller.poll(10))
         if(self.socket in pendientes):
             return True
         if(sys.stdin.fileno() in pendientes):
@@ -35,9 +35,14 @@ class Conexion:
     def obtenerEstructura(self):
         estructura = self.socket.recv_multipart()
         mensaje = estructura[0].decode('ascii')
-        mensajeJson = json.loads(mensaje)
-        return mensajeJson
-    
+        if(mensaje != "perdiste" or mensaje != "sumaPuntos"):
+            print("2: mensaje sin Json " + mensaje)
+            mensajeJson = json.loads(mensaje)
+            print("3: mensaje con json" + str(mensajeJson))
+            return mensajeJson
+        else:
+            return mensaje
+
     def obtenerMensaje(self):
         mensaje = self.socket.recv_multipart()
         respuesta = mensaje[0]
@@ -59,15 +64,24 @@ class Tablero:
             matrizLaberinto.append(vectorActual)
         self.tablero = matrizLaberinto
 
-    def hayObstaculo(self, posicionActual, jugadores):
+    def eliminarJugador(self, identidad, jugadores):
+        for jugador in jugadores:
+            if(jugador.getIdentidad() == identidad):
+                jugadores.remove(jugador)
+
+
+    def hayObstaculo(self, posicionActual, jugadores, servidor):
         hayPacman = False
         hayPared = False
         for i in jugadores:
             if(i.getPosicionLogica() == posicionActual):
                 hayPacman = True
                 if(i.getRol() == 1):
+                    idJugador = i.getIdentidad()
                     indice = jugadores.index(i)
                     jugadores.pop(indice)
+                    solicitud = ("comerJugador",idJugador)
+                    servidor.enviarSolicitud(solicitud)
         hayPared = self.hayPared(posicionActual)
         if(hayPared or hayPacman):
             return True
@@ -82,7 +96,7 @@ class Tablero:
             return True
         if(actual == ""):
             return False
-    
+
     def hayGalletaGrande(self, posicionActual):
         x = posicionActual[0]
         y = posicionActual[1]
@@ -100,7 +114,7 @@ class Tablero:
             return True
         else:
             return False
-    
+
     def contenidoMapa(self, posicion):
         x = posicion[0]
         y = posicion[1]
@@ -133,10 +147,10 @@ class Pared:
         return self.ancho
     def getAlto(self):
         return self.largo
-    
+
     def getImagen(self):
         return self.imagen
-    
+
     def posicionImprimir(self, posicionAnterior):
         return (posicionAnterior[0] * self.ancho, posicionAnterior[1] * self.largo)
 
@@ -154,28 +168,35 @@ class Jugador:
         self.ultimoMovimiento = "L"
         self.rol = 0
         self.puntaje = 0
-    
+
     def posicionImprimirJugador(self):
         x = self.posicionLogica[0]
         y = self.posicionLogica[1]
         return (x * self.ancho, y  * self.largo)
 
 
-    def movimiento(self,tipoMovimiento, casillaFutura):
+    def movimiento(self,tipoMovimiento, casillaFutura, servidor, siguienteCasilla):
+        aux = [siguienteCasilla[0], siguienteCasilla[1]]
+        print("4: posicion a enviar {}".format(aux))
+        solicitud = ("cambiarPosicion", str(aux))
         if(casillaFutura != True):
             if(tipoMovimiento == "U"):
                 self.posicionLogica = (self.posicionLogica[0], self.posicionLogica[1]-1)
                 self.ultimoMovimiento = "U"
+                servidor.enviarSolicitud(solicitud)
             if(tipoMovimiento == "R"):
                 self.posicionLogica = (self.posicionLogica[0]+1, self.posicionLogica[1])
                 self.ultimoMovimiento = "R"
+                servidor.enviarSolicitud(solicitud)
             if(tipoMovimiento == "D"):
                 self.posicionLogica = (self.posicionLogica[0], self.posicionLogica[1]+1)
                 self.ultimoMovimiento = "D"
+                servidor.enviarSolicitud(solicitud)
             if(tipoMovimiento == "L"):
                 self.posicionLogica = (self.posicionLogica[0]-1, self.posicionLogica[1])
                 self.ultimoMovimiento = "L"
-    
+                servidor.enviarSolicitud(solicitud)
+
     def imagenJugador(self):
         if(self.ultimoMovimiento == "U"):
             return self.imagenArriba[self.rol]
@@ -218,7 +239,7 @@ class Jugador:
         self.posicionLogica = posicion
 
 class Galleta:
-    
+
     def __init__(self, galleta,  anchoImagen=30, largoImagen=23):
         self.imagenGalleta = [pygame.image.load("sprites/cookie/cb.png"), pygame.image.load("sprites/cookie/cs.png")]
         self.tipoGalleta = galleta
@@ -229,6 +250,6 @@ class Galleta:
         x = posicion[0]
         y = posicion[1]
         return (self.ancho * x, self.largo * y)
-    
+
     def getImagenImprimir(self):
         return self.imagenGalleta[self.tipoGalleta]

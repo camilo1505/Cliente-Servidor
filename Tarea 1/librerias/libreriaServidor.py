@@ -9,8 +9,8 @@ class Servidor:
         self.clientesRegistrados = {}
         self.cantidadMaximaJugadores = cantidad
         self.jugadoresListos = 0
-        self.posicionesIniciales = [[1,1],[2,1]]
-    
+        self.posicionesIniciales = [[8,5],[3,11],[16,10],[10,1]]
+
     def iniciarServidor(self):
         self.socket.bind("tcp://*:5555")
 
@@ -31,10 +31,10 @@ class Servidor:
             return False
         else:
             return True
-    
+
     def enviarMensajeA(self, destinatario, mensaje):
         self.socket.send_multipart([bytes(destinatario, 'ascii'), bytes(mensaje, 'ascii')])
-    
+
     def registrarNuevoJugador(self, identidad):
         posicion = random.choice(self.posicionesIniciales)
         self.posicionesIniciales.remove(posicion)
@@ -50,7 +50,7 @@ class Servidor:
 
     def getCantidadMaximaJugadores(self):
         return self.cantidadMaximaJugadores
-    
+
     def imprimirRegistrado(self):
         print(self.clientesRegistrados)
 
@@ -60,21 +60,31 @@ class Servidor:
     def descomponerJson(self, mensaje):
         return json.dumps(mensaje)
 
+    def broadcast(self, identidad):
+        for usuario in self.clientesRegistrados.keys():
+            enviarMensajeA(usuario, identidad)
+
     def enviarPosiciones(self):
         posiciones = self.clientesRegistrados
+        print("clientes Registrados {}".format(posiciones))
         mensajeJson = self.descomponerJson(posiciones)
+        print("mensaje {}".format(mensajeJson))
         for usuario in self.clientesRegistrados.keys():
+            print("mensaje bytes {}".format(bytes(mensajeJson, 'ascii')))
             self.socket.send_multipart([bytes(usuario,'ascii'), bytes(mensajeJson, 'ascii')])
+    def eliminarJugador(self, identidad):
+        self.clientesRegistrados.pop(identidad)
+        mensaje = "perdiste"
+        self.enviarMensajeA(identidad, mensaje)
 
     def jugadorListo(self):
         self.jugadoresListos += 1
-    
+
     def getJugadoresListos(self):
         return self.jugadoresListos
 
     def cambiarPosicion(self, identidad, posicion):
         self.clientesRegistrados.pop(identidad)
-        x = posicion[1]
-        y = posicion[3]
-        nuevaPosicion = {identidad:[x,y]}
+        nuevaPosicion = json.loads(posicion)
+        nuevaPosicion = {identidad:nuevaPosicion}
         self.clientesRegistrados.update(nuevaPosicion)
