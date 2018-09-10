@@ -1,7 +1,10 @@
+import json
 def main():
-    diccionario = {'a':2, 'b':3}
-
-    for i in diccionario.keys():
-        print(i)
+    lista = b'["1","2","3"]'
+    listastr = json.dumps(lista)
+    print(listastr)
+    lista2 = json.loads(listastr)
+    lista2.pop()
+    print(lista2)
 
 main()
