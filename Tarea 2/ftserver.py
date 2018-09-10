@@ -27,12 +27,20 @@ def main():
         print("Waitting for useres to upload!!!")
         operation, *rest = clients.recv_multipart()
         if operation == b"upload":
-            filename, byts, sha1byts, sha1complete = rest
+            byts, sha1byts = rest
             storeAs = serversFolder + sha1byts.decode("ascii")
             print("Storing {}".format(storeAs))
             with open(storeAs, "wb") as f:
                 f.write(byts)
             print("Uploaded as {}".format(storeAs))
+        if operation == b"download":
+            sha1 = rest[0]
+            storeAs = serversFolder + sha1.decode('ascii')
+            with open(storeAs, "rb") as f:
+                leido = f.read()
+                clients.send(leido)
+            print("Download request")
+
         else:
             print("Unsupported operation: {}".format(operation))
         clients.send(b"Done")
