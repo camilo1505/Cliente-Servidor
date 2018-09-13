@@ -1,6 +1,7 @@
 
 import zmq
 import sys
+import os
 
 def main():
     if len(sys.argv) != 4:
@@ -22,6 +23,9 @@ def main():
     proxy.send_multipart([b"newServer", bytes(clientsAddress, "ascii")])
     m = proxy.recv()
     print(m)
+
+    if(not os.path.exists(serversFolder)):
+        os.mkdir(serversFolder)
 
     while True:
         print("Waitting for useres commands!!!")

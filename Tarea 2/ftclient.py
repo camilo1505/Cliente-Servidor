@@ -163,6 +163,9 @@ def main():
     proxy.connect("tcp://localhost:6666")
     proxy.identity = username
 
+    if(not os.path.exists("temp/")):
+        os.mkdir("temp")
+
     print("Operation: {}".format(operation))
     if operation == "upload":
         proxy.send_multipart([b"availableServers", username])
