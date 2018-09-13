@@ -5,9 +5,7 @@ class Archivo:
         self.servidores =  listaServidores
     
     def getNombreArchivo(self):
-        print("Valores: {}".format(self.nombre.values()))
         for name in self.nombre.values():
-            print("Name: {}".format(name))
             return name
     
     def getListaServidores(self):
@@ -15,6 +13,10 @@ class Archivo:
 
     def getShaPartes(self):
         return self.partes
+    
+    def getSha(self):
+        for sha in self.nombre.keys():
+            return sha
 
 class Usuario:
     def __init__(self, usuario):
@@ -30,11 +32,23 @@ class Usuario:
             if(archivo.getNombreArchivo() == nombreArchivo):
                 print("archivo get nombre {}".format(archivo.getNombreArchivo()))
                 return archivo.getShaPartes()
+        else:
+            print("No se encontro el archivo {}".format(nombreArchivo))
+            exit()
     
     def getListaServidores(self, nombreArchivo):
         for archivo in self.archivos:
             if(archivo.getNombreArchivo() == nombreArchivo):
                 return archivo.getListaServidores()
+
+    def getArchivos(self):
+        return self.archivos
+
+    def getNombresArchivos(self):
+        listAux = []
+        for archivo in self.archivos:
+            listAux.append(archivo.getNombreArchivo())
+        return listAux
 
     def agregarArchivo(self, archivo):
         self.archivos.append(archivo)        

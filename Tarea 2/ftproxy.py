@@ -20,6 +20,29 @@ def enviarArchivo(clients, usuario, nombreArchivo):
 
     clients.send_multipart([bytes(sha1Partes,'ascii'),bytes(listaServidores,'ascii')])
 
+def enviarArchivoSha(clients, archivo, nombreArchivo):
+    sha1Partes = json.dumps(archivo.getShaPartes())
+    listaServidores = json.dumps(archivo.getListaServidores())
+    print("Sha1: {}".format(sha1Partes))
+    print("servidores: {}".format(listaServidores))
+
+    clients.send_multipart([bytes(sha1Partes,'ascii'),bytes(listaServidores,'ascii'),bytes(nombreArchivo, 'ascii')])
+
+def buscarSha(sha1, usuarios):
+    for usuario in usuarios:
+        archivosUsuario = usuario.getArchivos()
+        for archivo in archivosUsuario:
+            if(archivo.getSha() == sha1):
+                return archivo
+
+def listar(usuarios, usuario):
+    for i in usuarios:
+        print("Usuario: {}".format(usuario))
+        if(i.getNombreUsuario() == usuario):
+            print("usuario: {}".format(i.getNombreUsuario()))
+            print("Archivos: {}".format(i.getNombresArchivos()))
+            return i.getNombresArchivos()
+
 def main():
     # Address for each server to receive files
     servAddresses = []
@@ -78,6 +101,22 @@ def main():
                 usuarioBuscado = buscarUsuario(usuarios, nombreUsuario)
 
                 enviarArchivo(clients, usuarioBuscado, nombreArchivo)
+            
+            if(operation == b"share"):
+                shaArchivoBytes = msg[0]
+                shaArchivo = shaArchivoBytes.decode('ascii')
+
+                shaBuscado = buscarSha(shaArchivo, usuarios)
+
+                nombreArchivo = shaBuscado.getNombreArchivo()
+
+                enviarArchivoSha(clients, shaBuscado, nombreArchivo)
+
+            if(operation == b"list"):
+                aux = nombreUsuarioBytes.decode('ascii')
+                listarArchivos = listar(usuarios, aux)
+                print(listarArchivos)
+                clients.send_json(listarArchivos)                
 
         if servers in socks:
             print("Message from server")

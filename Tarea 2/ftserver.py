@@ -24,7 +24,7 @@ def main():
     print(m)
 
     while True:
-        print("Waitting for useres to upload!!!")
+        print("Waitting for useres commands!!!")
         operation, *rest = clients.recv_multipart()
         if operation == b"upload":
             byts, sha1byts = rest
@@ -33,17 +33,16 @@ def main():
             with open(storeAs, "wb") as f:
                 f.write(byts)
             print("Uploaded as {}".format(storeAs))
+            clients.send(b"Done")
         if operation == b"download":
             sha1 = rest[0]
+            print("Sha1 actual: {}".format(sha1))
             storeAs = serversFolder + sha1.decode('ascii')
+            print("Parte actual: {}".format(storeAs))
             with open(storeAs, "rb") as f:
                 leido = f.read()
                 clients.send(leido)
             print("Download request")
-
-        else:
-            print("Unsupported operation: {}".format(operation))
-        clients.send(b"Done")
 
 if __name__ == '__main__':
     main()

@@ -2,6 +2,7 @@ import zmq
 import sys
 import hashlib
 import json
+import os
 
 partSize = 1024 * 1024 * 10
 
@@ -33,7 +34,7 @@ def uploadFile(context, filename, servers, proxy, username):
         completeSha1= bytes(computeHashFile(filename), "ascii")
         finished = False
         part = 0
-        sha1File = open("temp/temporal.txt", "ab")
+        sha1File = open("temp/temporal.txt", "wb")
 
         #Escribir en la primer linea del archivo el sha1 de todo el archivo
         sha1File.write(completeSha1 + b'\n')
@@ -100,14 +101,51 @@ def download(context, nombreArchivo, proxy, nombreUsuario):
             s = sockets[part % len(sockets)]
             s.send_multipart([b"download", bytes(sha1, 'ascii')])
             parteArchivo = s.recv()
+            print("Received reply for part {} ".format(part))
             archivo.write(parteArchivo)
             part += 1
         print("Succesfull download <{}>".format(nombreArchivo.decode('ascii')))
-        response = s.recv()
 
+def share(context, sha1Archivo, proxy, nombreUsuario):
+    proxy.send_multipart([b'share', nombreUsuario, sha1Archivo])
 
+    sha1PartesBytes, listaServidoresBytes, nombreArchivoBytes = proxy.recv_multipart()
+
+    sha1Partes = json.loads(sha1PartesBytes.decode('ascii'))
+    nombreArchivo = nombreArchivoBytes.decode('ascii')
+
+    sha1Partes.pop()
+
+    listaServidores = json.loads(listaServidoresBytes.decode('ascii'))
+
+    print("Nombre Archivo: {}".format(nombreArchivo))
+    print("Sha1Partes: {}".format(sha1Partes))
+    print("listaServidores: {}".format(listaServidores))
+
+    sockets = []
+    for servidor in listaServidores:
+        print("Servidor: {}".format(servidor))
+        s = context.socket(zmq.REQ)
+        s.connect("tcp://"+ str(servidor))
+        sockets.append(s)
+
+    with open(nombreArchivo, 'ab') as archivo:
+        part = 0
+        for sha1 in sha1Partes:
+            s = sockets[part % len(sockets)]
+            s.send_multipart([b"download", bytes(sha1, 'ascii')])
+            parteArchivo = s.recv()
+            print("Received reply for part {} ".format(part))
+            archivo.write(parteArchivo)
+            part += 1
+        print("Succesfull Share <{}>".format(nombreArchivo))    
     
+def listar(context, proxy, nombreUsuario):
+    proxy.send_multipart([b"list", nombreUsuario])
 
+    archivos = proxy.recv_json()
+
+    print(archivos)
 
 def main():
     if len(sys.argv) != 4:
@@ -132,11 +170,15 @@ def main():
         print("There are {} available servers".format(len(servers)))
         uploadFile(context, filename, servers, proxy, username)
         print("File {} was uploaded.".format(filename))
+        os.remove("temp/temporal.txt")
     elif operation == "download":
         download(context, filename, proxy, username)
 
     elif operation == "share":
-        print("Not implemented yet")
+        share(context, filename, proxy, username)
+
+    elif operation == "list":
+        listar(context, proxy, username)
     else:
         print("Operation not found!!!")
 
