@@ -3,6 +3,7 @@ import sys
 import hashlib
 import json
 import os
+import time
 
 partSize = 1024 * 1024 * 10
 
@@ -34,13 +35,15 @@ def uploadFile(context, filename, servers, proxy, username):
         completeSha1= bytes(computeHashFile(filename), "ascii")
         finished = False
         part = 0
+        partAux = 1
         sha1File = open("temp/temporal.txt", "wb")
+
+        totalFileSize = os.path.getsize(filename)
 
         #Escribir en la primer linea del archivo el sha1 de todo el archivo
         sha1File.write(completeSha1 + b'\n')
 
         while not finished:
-            print("Uploading part {}".format(part))
             f.seek(part*partSize)
             bt = f.read(partSize)
 
@@ -52,11 +55,21 @@ def uploadFile(context, filename, servers, proxy, username):
             s = sockets[part % len(sockets)]
             s.send_multipart([b"upload", bt, sha1bt])
             response = s.recv()
-            print("Received reply for part {} ".format(part))
+
+            currentPart = partAux * partSize
+            hashtag = (60 * currentPart) // totalFileSize
+            void = 60 - hashtag
+            percent = (100 * hashtag) // 60
+            print("Uploading: [{}{}] {}%".format('#' * hashtag, ' ' * void, percent - 1), end='\r')
+            time.sleep(0.05)
+            
+            partAux += 1
             part = part + 1
             if len(bt) < partSize:
                 finished = True
         sha1File.close()
+        print('\n')
+        print("Succesfull Upload <{}>".format(filename.decode('ascii')))
         reportarProxyUpload(filename, username, servers, proxy)
 
 def reportarProxyUpload(nombreArchivo, nombreUsuario, servidores, proxy):
@@ -72,7 +85,7 @@ def reportarProxyUpload(nombreArchivo, nombreUsuario, servidores, proxy):
     
     proxy.send_multipart([b'uploadShas', nombreUsuario, nombreArchivo, bytes(listaSha1Json,'ascii'), bytes(servidoresJson, 'ascii')])
     respuesta = proxy.recv()
-    print(respuesta.decode('ascii'))
+    print("Report: {}".format(respuesta.decode('ascii')))
 
 def download(context, nombreArchivo, proxy, nombreUsuario):
     proxy.send_multipart([b"download", nombreUsuario, nombreArchivo])
@@ -84,27 +97,31 @@ def download(context, nombreArchivo, proxy, nombreUsuario):
 
     listaServidores = json.loads(listaServidoresBytes.decode('ascii'))
 
-
-    print("Sha1Partes: {}".format(sha1Partes))
-    print("listaServidores: {}".format(listaServidores))
-
     sockets = []
     for servidor in listaServidores:
-        print("Servidor: {}".format(servidor))
         s = context.socket(zmq.REQ)
         s.connect("tcp://"+ str(servidor))
         sockets.append(s)
 
     with open(nombreArchivo.decode("ascii"), 'ab') as archivo:
         part = 0
+        partAux = 1
+        totalPartsFile = len(sha1Partes)
         for sha1 in sha1Partes:
             s = sockets[part % len(sockets)]
             s.send_multipart([b"download", bytes(sha1, 'ascii')])
             parteArchivo = s.recv()
-            print("Received reply for part {} ".format(part))
             archivo.write(parteArchivo)
+
+            hashtag = (60 * partAux ) // totalPartsFile
+            void = 60 - hashtag
+            percent = (100 * hashtag) // 60 
+            print("Downloading: [{}{}] {}%".format('#' * hashtag, ' ' * void, percent), end='\r')
+            time.sleep(0.05)
+            partAux += 1
             part += 1
-        print("Succesfull download <{}>".format(nombreArchivo.decode('ascii')))
+        print('\n')
+        print("Succesfull Download <{}>".format(nombreArchivo.decode('ascii')))
 
 def share(context, sha1Archivo, proxy, nombreUsuario):
     proxy.send_multipart([b'share', nombreUsuario, sha1Archivo])
@@ -118,25 +135,28 @@ def share(context, sha1Archivo, proxy, nombreUsuario):
 
     listaServidores = json.loads(listaServidoresBytes.decode('ascii'))
 
-    print("Nombre Archivo: {}".format(nombreArchivo))
-    print("Sha1Partes: {}".format(sha1Partes))
-    print("listaServidores: {}".format(listaServidores))
-
     sockets = []
     for servidor in listaServidores:
-        print("Servidor: {}".format(servidor))
         s = context.socket(zmq.REQ)
         s.connect("tcp://"+ str(servidor))
         sockets.append(s)
 
     with open(nombreArchivo, 'ab') as archivo:
         part = 0
+        partAux = 1
+        totalPartsFile = len(sha1Partes)
         for sha1 in sha1Partes:
             s = sockets[part % len(sockets)]
             s.send_multipart([b"download", bytes(sha1, 'ascii')])
             parteArchivo = s.recv()
-            print("Received reply for part {} ".format(part))
             archivo.write(parteArchivo)
+
+            hashtag = (60 * partAux) // totalPartsFile
+            void = 60 - hashtag
+            percent = (100 * hashtag) // 60 
+            print("Downloading: [{}{}] {}%".format('#' * hashtag, ' ' * void, percent))
+            time.sleep(0.05)
+            partAux +=1
             part += 1
         print("Succesfull Share <{}>".format(nombreArchivo))    
     
@@ -148,42 +168,43 @@ def listar(context, proxy, nombreUsuario):
     print(archivos)
 
 def main():
-    if len(sys.argv) != 4:
-        print("Must be called with a filename")
-        print("Sample call: python ftclient <username> <operation> <filename>")
-        exit()
+    menu = ''
+    username = input("Username: <").encode('ascii')
+    while(menu != b'exit'):
+        fileMenu = open("menu.dot", 'r')
+        menu = fileMenu.read()
+        print(menu)
+        operation = input('Operation: <')
+        if(operation != "list" and operation != "exit"):
+            filename = input('File Name: <').encode('ascii')
+        if(operation == "exit"):
+            exit()
 
+        context = zmq.Context()
+        proxy = context.socket(zmq.REQ)
+        proxy.connect("tcp://localhost:6666")
+        proxy.identity = username
 
-    username = sys.argv[1].encode('ascii')
-    operation = sys.argv[2]
-    filename = sys.argv[3].encode('ascii')
+        if(not os.path.exists("temp/")):
+            os.mkdir("temp")
 
-    context = zmq.Context()
-    proxy = context.socket(zmq.REQ)
-    proxy.connect("tcp://localhost:6666")
-    proxy.identity = username
+        print("Operation: {}".format(operation))
+        if operation == "upload":
+            proxy.send_multipart([b"availableServers", username])
+            servers = proxy.recv_multipart()
+            uploadFile(context, filename, servers, proxy, username)
+            os.remove("temp/temporal.txt")
 
-    if(not os.path.exists("temp/")):
-        os.mkdir("temp")
+        elif operation == "download":
+            download(context, filename, proxy, username)
 
-    print("Operation: {}".format(operation))
-    if operation == "upload":
-        proxy.send_multipart([b"availableServers", username])
-        servers = proxy.recv_multipart()
-        print("There are {} available servers".format(len(servers)))
-        uploadFile(context, filename, servers, proxy, username)
-        print("File {} was uploaded.".format(filename))
-        os.remove("temp/temporal.txt")
-    elif operation == "download":
-        download(context, filename, proxy, username)
+        elif operation == "share":
+            share(context, filename, proxy, username)
 
-    elif operation == "share":
-        share(context, filename, proxy, username)
-
-    elif operation == "list":
-        listar(context, proxy, username)
-    else:
-        print("Operation not found!!!")
+        elif operation == "list":
+            listar(context, proxy, username)
+        else:
+            print("Operation not found!!!")
 
 if __name__ == '__main__':
     main()
